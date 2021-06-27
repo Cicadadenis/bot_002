@@ -26,7 +26,7 @@ async def send_ad_all_users(message: types.Message, state: FSMContext):
     await StorageFunctions.here_ad_text.set()
 
 
-@dp.message_handler(IsAdmin(), text="👤 Админы", state="*")
+@dp.message_handler(IsAdmin(), text="👤 Добавление Администраторов", state="*")
 async def send_add_admins(message: types.Message, state: FSMContext):
     await state.finish()
     await message.answer("👤 <b>Введите id для добавления Администратора:</b>")
