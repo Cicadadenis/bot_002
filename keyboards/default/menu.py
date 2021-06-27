@@ -11,7 +11,6 @@ def check_user_out_func(user_id):
     if str(user_id) in admins:
         menu_default.row("🎁 Управление товарами 🖍", "📰 Информация о боте")
         menu_default.row("⚙ Настройки", "🔆 Общие функции", "🔑 Платежные системы")
-        menu_default.row("⚙ Добавить Админа")
     return menu_default
 
 
