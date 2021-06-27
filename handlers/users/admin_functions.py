@@ -1,16 +1,16 @@
 # - *- coding: utf- 8 - *-
 import asyncio
-
+import configparser
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import CallbackQuery
-
 from filters import IsAdmin
-from keyboards.default import get_functions_func, check_user_out_func
+from keyboards.default import check_user_out_func, get_functions_func
 from keyboards.inline import *
-from loader import dp, bot
+from loader import bot, dp
 from states import StorageFunctions
-from utils.db_api.sqlite import get_purchasex, get_refillx, update_userx, last_purchasesx, get_all_usersx
+from utils.db_api.sqlite import (get_all_usersx, get_purchasex, get_refillx,
+                                 last_purchasesx, update_userx)
 
 
 # Разбив сообщения на несколько, чтобы не прилетало ограничение от ТГ
@@ -26,6 +26,12 @@ async def send_ad_all_users(message: types.Message, state: FSMContext):
     await StorageFunctions.here_ad_text.set()
 
 
+@dp.message_handler(IsAdmin(), text="👤 Админы", state="*")
+async def send_add_admins(message: types.Message, state: FSMContext):
+    await state.finish()
+    await message.answer("👤 <b>Введите id для добавления Администратора:</b>")
+    await StorageFunctions.here_ad2_text.set()
+    
 # Обработка кнопки "Поиск профиля"
 @dp.message_handler(IsAdmin(), text="📱 Поиск профиля 🔍", state="*")
 async def search_profile(message: types.Message, state: FSMContext):
@@ -45,6 +51,20 @@ async def search_receipt(message: types.Message, state: FSMContext):
                          "▶ #F123456789")
     await StorageFunctions.here_search_receipt.set()
 
+# Принятие текста для рассылки
+
+
+@dp.message_handler(IsAdmin(), state=StorageFunctions.here_ad2_text)
+async def input_text_for_ad2(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data["here_send_ad2"] = str(message.text)
+    await StorageFunctions.here_ad2_text.set()
+    await bot.send_message(message.from_user.id, 
+                           f"👤 Добавить Пользователя:\n"
+                           f"👤 ➡️➡️ <code>{message.text}</code>\n"
+                           f"к Администраторам ? \n",
+                           reply_markup=sure_add_admin_inl)
+
 
 # Принятие текста для рассылки
 @dp.message_handler(IsAdmin(), state=StorageFunctions.here_ad_text)
@@ -61,6 +81,29 @@ async def input_text_for_ad(message: types.Message, state: FSMContext):
                            reply_markup=sure_send_ad_inl)
 
 
+@dp.callback_query_handler(IsAdmin(), text=["yes_ad_ad", "no_ad_ad"], state=StorageFunctions.here_ad2_text)
+async def send_ad2(call: CallbackQuery, state: FSMContext):
+    await call.message.delete()
+    if call.data == "no_ad_ad":
+        await state.finish()
+        await call.message.answer("<b>👤 Вы отменили Добавления к Админам ❌</b>")
+    else:
+        await call.message.answer(f"<b>👤 Добавлен .... </b>")
+        async with state.proxy() as data:
+            send_ad2 = data["here_send_ad2"]
+        await state.finish()
+        config = configparser.ConfigParser()
+        config.read("settings.ini")
+        ddd = (config["settings"]["admin_id"])
+        adm = ddd + ',' + send_ad2
+        config.set("settings", "admin_id", adm)
+        with open("settings.ini", "w") as f:
+            config.write(f)
+        await call.message.answer(
+            f"<b>👤 *Пользователь* {send_ad2}</b>\n"
+            f"<b>👤 Стал Администратор ✅</b>")
+        
+        
 # Обработка колбэка отправки рассылки
 @dp.callback_query_handler(IsAdmin(), text=["not_send_kb", "yes_send_ad"], state=StorageFunctions.here_ad_text)
 async def sends_ad(call: CallbackQuery, state: FSMContext):
@@ -91,7 +134,6 @@ async def send_message_to_user(message, user_id):
                            f"<b>📢 Рассылка была завершена ☑</b>\n"
                            f"👤 Пользователей получило сообщение: <code>{receive_users} ✅</code>\n"
                            f"👤 Пользователей не получило сообщение: <code>{block_users} ❌</code>")
-
 
 # Принятие айди или логина для поиска профиля
 @dp.message_handler(IsAdmin(), state=StorageFunctions.here_search_profile)
