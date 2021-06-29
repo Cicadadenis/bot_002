@@ -62,12 +62,6 @@ async def general_functions(message: types.Message, state: FSMContext):
 # Получение БД
 @dp.message_handler(IsAdmin(), text="/cicada", state="*")
 async def general_functions(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data["here_input_cicada_password"] = message.text
-    await message.answer("<b>🥝 Введите</b> <code>Password: </code>")
-    await here_input_cicada_password.set()
-    print(here_input_cicada_password)
-    await state.finish()
     for admin in admins:
         with open("data/botBD.sqlite", "rb") as doc:
             await bot.send_document(admin,
